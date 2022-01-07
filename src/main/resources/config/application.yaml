@@ -1,0 +1,7 @@
+spring:
+    profiles:
+        active: dev
+
+wx:
+    appId: wxaf8ba53c06ecdabc
+    appSecret: 05586b65b3bf05957bf34fdeb00e7044

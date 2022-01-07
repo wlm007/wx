@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<menu>
+    <button name="爱在中银" submenu="true">
+        <sub_button>
+            <item name="世界益游戏" type="click" key="M0001-01"/>
+            <item name="中银百事通" type="click" key="M0001-02"/>
+            <item name="尊享优惠" type="click" key="M0001-03"/>
+            <item name="卡卡笑优惠" type="click" key="M0001-04"/>
+        </sub_button>
+    </button>
+    <button name="王多鱼" submenu="true">
+        <sub_button>
+            <item name="江总牛b" type="click" key="M0002_01"/>
+        </sub_button>
+    </button>
+    <button name="电竞五丑" submenu="false" type="click" key="M0003">
+    </button>
+</menu>
