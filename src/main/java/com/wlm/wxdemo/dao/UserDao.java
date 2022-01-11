@@ -1,4 +1,4 @@
-package com.wlm.wxdemo.mapper;
+package com.wlm.wxdemo.dao;
 
 import com.wlm.wxdemo.model.user.SysUser;
 import org.apache.ibatis.annotations.Mapper;
@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
  * @date 2022/1/5 11:06
  */
 @Mapper
-public interface UserMapper {
+public interface UserDao {
 
     /**
      * 获取用户信息

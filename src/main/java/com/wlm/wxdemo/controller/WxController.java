@@ -113,4 +113,25 @@ public class WxController {
         return wxService.getTemplateList();
     }
 
+    @ApiOperation(value = "创建二维码")
+    @ApiOperationSupport(author = "wlm", order = 8)
+    @GetMapping("/create_ticket/{isTemporary}/{isStr}")
+    public JSONObject createTicket(@PathVariable("isTemporary") boolean isTemporary, @PathVariable("isStr") boolean isStr) {
+        return wxService.createTicket(isTemporary, isStr);
+    }
+
+    @ApiOperation(value = "获取微信服务器ip地址")
+    @ApiOperationSupport(author = "wlm", order = 9)
+    @GetMapping("/get_ips")
+    public JSONObject getIpList() {
+        return wxService.getWeiXinIpList();
+    }
+
+    @ApiOperation(value = "获取微信公众号关注用户列表")
+    @ApiOperationSupport(author = "wlm", order = 10)
+    @GetMapping("/get_user_list")
+    public JSONObject getUserList(@RequestParam(value = "openId", required = false) String openId) {
+        return wxService.getUserList(openId);
+    }
+
 }

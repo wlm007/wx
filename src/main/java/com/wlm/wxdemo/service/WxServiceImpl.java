@@ -2,6 +2,7 @@ package com.wlm.wxdemo.service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.wlm.wxdemo.dao.WxTokenDao;
 import com.wlm.wxdemo.enums.FileEnum;
 import com.wlm.wxdemo.enums.WxEventEnums;
 import com.wlm.wxdemo.enums.WxMsgTypeEnums;
@@ -10,6 +11,7 @@ import com.wlm.wxdemo.params.wx.WxMaterialListParams;
 import com.wlm.wxdemo.utils.MessageUtils;
 import com.wlm.wxdemo.utils.WxDicts;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +43,11 @@ public class WxServiceImpl {
      * 菜单创建  100 次/天
      */
     private String menuCreateUrl = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=ACCESS_TOKEN";
+
+    /**
+     * 获取用户列表
+     */
+    private String getUserListUrl = "https://api.weixin.qq.com/cgi-bin/user/get?access_token=ACCESS_TOKEN&next_openid=NEXT_OPENID";
 
     /**
      * 获取用户基本信息  500000 次/天
@@ -88,48 +95,87 @@ public class WxServiceImpl {
     private String sendTemplateUrl = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=ACCESS_TOKEN";
 
     /**
+     * 创建临时/永久二维码ticket
+     */
+    private String createTicketUrl = "https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=ACCESS_TOKEN";
+
+    /**
+     * 获取微信服务器ip地址
+     */
+    private String getWeiXinUrlList = "https://api.weixin.qq.com/cgi-bin/get_api_domain_ip?access_token=ACCESS_TOKEN";
+
+    /**
+     * 通过ticket获取/展示 二维码
+     */
+    private String showTicketUrl = "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=TICKET";
+
+    /**
      * token  2小时有效期
      */
-    private String token = "52_YNtbCDPShnaRmV6Z0mPA-33yZ0L9Kb_WMcwYg-2Fze5foLOTf4rKGIOiNXGtS-bttSuL5MpszUVg-lGDYbT3k_buXiZva5iwHRF4L23Sre-ywWJfsdyWjPJF7MGcsYTs6XIshmjgedJLpwb7KOWeAEAEIQ";
+    private String token;
 
-    private Integer expiresIn = 7200;
-
-    private Long nowTime;
+    /**
+     * token过期时间 7200000ms - 7200s - 120m - 2h
+     */
+    private Integer expiresIn = 7200000;
 
     private final String GET = "GET";
 
     private final String POST = "POST";
 
+    private final String ACCESS_TOKEN = "ACCESS_TOKEN";
+
+    private WxTokenDao wxTokenDao;
+
+    @Autowired
+    public void setWxTokenDao(WxTokenDao wxTokenDao) {
+        this.wxTokenDao = wxTokenDao;
+    }
+
     public String getAccessToken(String appId, String appSecret) {
         Long now = System.currentTimeMillis();
         // 微信token失效时间为7200秒 在此时间内再次请求获取token时直接返回上一次保存的token
-        if (nowTime != null && (now - nowTime <= expiresIn)) {
-            System.out.println("直接返回token：" + token);
-            return token;
+        WxToken wxToken = wxTokenDao.selectByPrimaryKey(1);
+        if (wxToken == null) {
+            String url = accessTokenUrl.replace("appId", appId).replace("appSecret", appSecret);
+            JSONObject result = httpsRequest(url, GET, null);
+            // 将token保存并记录当前时间
+            token = result.getString("access_token");
+            wxToken = new WxToken();
+            wxToken.setAccessToken(token);
+            wxToken.setUpdateTime(now);
+            wxTokenDao.insert(wxToken);
+        } else {
+            // 如果token存在则判断是否2小时过期
+            Long updateTime = wxToken.getUpdateTime();
+            if (now - updateTime > expiresIn) {
+                String url = accessTokenUrl.replace("appId", appId).replace("appSecret", appSecret);
+                JSONObject result = httpsRequest(url, GET, null);
+                token = result.getString("access_token");
+                wxToken.setAccessToken(token);
+                wxToken.setUpdateTime(now);
+                wxTokenDao.updateByPrimaryKey(wxToken);
+            } else {
+                token = wxToken.getAccessToken();
+            }
         }
-        String url = accessTokenUrl.replace("appId", appId).replace("appSecret", appSecret);
-        JSONObject result = httpsRequest(url, GET, null);
-        // 将token保存并记录当前时间
-        token = result.getString("access_token");
-        System.out.println("请求wx获取token：" + token);
-        nowTime = System.currentTimeMillis();
-        return result.toJSONString();
+        return token;
     }
 
     public JSONObject createMenu(WxMenu menu) {
-        String url = menuCreateUrl.replace("ACCESS_TOKEN", token);
+        String url = menuCreateUrl.replace(ACCESS_TOKEN, token);
         String menuJson = JSONObject.toJSON(menu).toString();
         System.out.println(menuJson);
         return httpsRequest(url,POST, menuJson);
     }
 
-    private String imageUrl = "0EXTCJ7mnwSk3SHfVjyH7Ch_lbqAxrlfNHIIshs1d1Jts_uCg0Sab0L2HsNnohmV";
+    private String imageMediaId = "0EXTCJ7mnwSk3SHfVjyH7Ch_lbqAxrlfNHIIshs1d1Jts_uCg0Sab0L2HsNnohmV";
 
     public JSONObject uploadImg(File file) {
         if (!file.exists() || !file.isFile()) {
             throw new RuntimeException("文件不存在");
         }
-        String url = uploadMaterialUrl.replace("ACCESS_TOKEN", token).replace("TYPE", "image");
+        String url = uploadMaterialUrl.replace(ACCESS_TOKEN, token).replace("TYPE", "image");
 
         StringBuilder sb = new StringBuilder();
         StringBuilder resultJson = new StringBuilder();
@@ -192,7 +238,7 @@ public class WxServiceImpl {
         }
         JSONObject result = JSONObject.parseObject(resultJson.toString());
         System.out.println(result);
-        imageUrl = result.getString("media_id");
+        imageMediaId = result.getString("media_id");
         return result;
 
     }
@@ -215,6 +261,7 @@ public class WxServiceImpl {
         StringBuilder sb = new StringBuilder();
         JSONObject result = null;
         try {
+            System.out.println("-------------开始请求微信公众号后台-----------------------");
             HttpsURLConnection conn = getHttpsConn(url);
             if (null == conn) {
                 throw new RuntimeException("建立网络连接失败");
@@ -234,6 +281,7 @@ public class WxServiceImpl {
                 out.close();
             }
             readResultInput(sb, conn);
+            System.out.println("-------------结束请求微信公众号后台-----------------------");
             result = JSON.parseObject(sb.toString());
         } catch (Exception e) {
             e.printStackTrace();
@@ -317,11 +365,30 @@ public class WxServiceImpl {
             if (WxEventEnums.WX_EVENT_TYPE_CLICK.getEventType().equals(eventType)) {
                 String eventKey = receiverMsg.get(WxDicts.WX_EVENT_KEY);
                 String m00003 = "M0003";
+                String m000201 = "M0002_01";
                 if (m00003.equals(eventKey)) {
                     ImageMessage imageMessage = new ImageMessage();
                     this.setMsgData(receiverMsg, imageMessage, WxMsgTypeEnums.WX_MSG_TYPE_IMAGE.getMsgType());
-                    imageMessage.setImage(new Image(imageUrl));
+                    imageMessage.setImage(new Image(imageMediaId));
                     resStr = MessageUtils.imageMessageToXml(imageMessage);
+                } else if (m000201.equals(eventKey)) {
+                    ArticlesMessage articlesMessage = new ArticlesMessage();
+                    articlesMessage.setArticleCount(1);
+                    this.setMsgData(receiverMsg, articlesMessage, WxMsgTypeEnums.WX_MSG_TYPE_NEWS.getMsgType());
+                    Articles articles = new Articles();
+                    ArticlesItem item = new ArticlesItem();
+                    item.setTitle("test");
+                    item.setDescription("test");
+                    item.setPicUrl("http://mmbiz.qpic.cn/mmbiz_jpg/ibTxdMwOicibduncxldKmefBCGA10RcJ6y7TicEIiaiaRW9RrjblJc10W7oqluEOcZPFOwCG8mg1WRlpljBMR6dulD8g/0?wx_fmt=jpeg");
+                    item.setUrl("https://www.baidu.com");
+                    articles.setItem(item);
+                    articlesMessage.setArticles(articles);
+                    resStr = MessageUtils.articlesMessageToXml(articlesMessage);
+                } else {
+                    TextMessage textMessage = new TextMessage();
+                    textMessage.setContent("你好");
+                    this.setMsgData(receiverMsg, textMessage, WxMsgTypeEnums.WX_MSG_TYPE_TEXT.getMsgType());
+                    resStr = MessageUtils.textMessageToXml(textMessage);
                 }
             } else if (WxEventEnums.WX_EVENT_TYPE_SUBSCRIBE.getEventType().equals(eventType)) {
                 // 关注事件
@@ -363,7 +430,7 @@ public class WxServiceImpl {
     }
 
     public JSONObject getMaterialList(String type) {
-        String url = getMaterialListUrl.replace("ACCESS_TOKEN", token);
+        String url = getMaterialListUrl.replace(ACCESS_TOKEN, token);
         WxMaterialListParams params = new WxMaterialListParams();
         params.setType(type);
         params.setCount(20);
@@ -372,12 +439,12 @@ public class WxServiceImpl {
     }
 
     public JSONObject getTemplateList() {
-        String url = getTemplateListUrl.replace("ACCESS_TOKEN", token);
+        String url = getTemplateListUrl.replace(ACCESS_TOKEN, token);
         return httpsRequest(url, GET, null);
     }
 
     public JSONObject sendTemplate() {
-        String url = sendTemplateUrl.replace("ACCESS_TOKEN", token);
+        String url = sendTemplateUrl.replace(ACCESS_TOKEN, token);
         String outStr =
            "{" +
                 "\"touser\":\"oR4y25mJdVv2Ww4CuXaoSioD9VsM\"," +
@@ -411,5 +478,38 @@ public class WxServiceImpl {
                 "}" +
            "}";
         return httpsRequest(url, POST, outStr);
+    }
+
+    public JSONObject createTicket(boolean isTemporary, boolean isStr) {
+        String url = createTicketUrl.replace(ACCESS_TOKEN, token);
+        String actionName;
+        if (isTemporary) {
+            actionName = isStr ? "QR_STR_SCENE" : "QR_SCENE";
+        } else {
+            actionName = isStr ? "QR_LIMIT_STR_SCENE" : "QR_LIMIT_SCENE";
+        }
+        String temporaryParams =
+                "{" +
+                        "\"expire_seconds\":604800," +
+                        "\"action_name\":\""+actionName+"\"," +
+                        "\"action_info\":{" +
+                            "\"scene\":{" +
+                                (isStr ? "\"scene_str\":\"test\"" : "\"scene_id\":123") +
+                            "}" +
+                        "}" +
+                "}";
+        JSONObject result = httpsRequest(url, POST, temporaryParams);
+        result.put("get_ticket", showTicketUrl.replace("TICKET", result.getString("ticket")));
+        return result;
+    }
+
+    public JSONObject getWeiXinIpList() {
+        String url = getWeiXinUrlList.replace(ACCESS_TOKEN, token);
+        return httpsRequest(url, GET, null);
+    }
+
+    public JSONObject getUserList(String openId) {
+        String url = getUserListUrl.replace(ACCESS_TOKEN, token).replace("NEXT_OPENID", openId == null ? "" : openId);
+        return httpsRequest(url, GET, null);
     }
 }

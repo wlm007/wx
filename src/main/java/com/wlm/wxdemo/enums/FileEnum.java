@@ -18,11 +18,11 @@ public enum FileEnum {
     /**
      * 图片: 0
      */
-    GIF("gif", 0, "images"),
-    JPEG("jpeg", 0, "images"),
-    PNG("png", 0, "images"),
-    JPG("jpg", 0, "images"),
-    BMP("bmp", 0, "images"),
+    GIF("gif", 0, "static/images"),
+    JPEG("jpeg", 0, "static/images"),
+    PNG("png", 0, "static/images"),
+    JPG("jpg", 0, "static/images"),
+    BMP("bmp", 0, "static/images"),
     /**
      * 音频: 1
      */

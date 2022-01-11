@@ -5,6 +5,7 @@ import com.thoughtworks.xstream.core.util.QuickWriter;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.io.xml.PrettyPrintWriter;
 import com.thoughtworks.xstream.io.xml.XppDriver;
+import com.wlm.wxdemo.model.wx.ArticlesMessage;
 import com.wlm.wxdemo.model.wx.ImageMessage;
 import com.wlm.wxdemo.model.wx.TextMessage;
 import jdk.internal.util.xml.impl.ReaderUTF8;
@@ -43,9 +44,14 @@ public class MessageUtils {
                 @Override
                 public void startNode(String name, Class clazz) {
                     super.startNode(name, clazz);
-                    // 业务处理 针对 CreateTime 标签不添加 CDATA
+                    // 业务处理 针对 特定标签不添加 CDATA
                     String createTime = "CreateTime";
-                    cData = !createTime.equals(name);
+                    String articleCount = "ArticleCount";
+                    if (createTime.equals(name)) {
+                        cData = false;
+                    } else {
+                        cData = !articleCount.equals(name);
+                    }
                 }
                 @Override
                 protected void writeText(QuickWriter writer, String text) {
@@ -121,5 +127,15 @@ public class MessageUtils {
     public static String imageMessageToXml(ImageMessage imageMessage) {
         xStream.alias(XML, imageMessage.getClass());
         return xStream.toXML(imageMessage);
+    }
+
+    /**
+     * 图文消息 -> xml
+     * @param message 图文消息
+     * @return 转化后的xml
+     */
+    public static String articlesMessageToXml(ArticlesMessage message) {
+        xStream.alias(XML, message.getClass());
+        return xStream.toXML(message);
     }
 }

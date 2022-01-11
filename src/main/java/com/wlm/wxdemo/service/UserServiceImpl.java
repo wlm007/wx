@@ -1,6 +1,6 @@
 package com.wlm.wxdemo.service;
 
-import com.wlm.wxdemo.mapper.UserMapper;
+import com.wlm.wxdemo.dao.UserDao;
 import com.wlm.wxdemo.model.user.SysUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,14 +12,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserServiceImpl {
 
-    private UserMapper userMapper;
+    private UserDao userDao;
 
     @Autowired
-    public void setUserMapper(UserMapper userMapper) {
-        this.userMapper = userMapper;
+    public void setUserMapper(UserDao userDao) {
+        this.userDao = userDao;
     }
 
     public SysUser getUserById(Integer id) {
-        return userMapper.getUserById(id);
+        return userDao.getUserById(id);
     }
 }
