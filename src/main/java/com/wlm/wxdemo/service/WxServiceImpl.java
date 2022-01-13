@@ -72,7 +72,12 @@ public class WxServiceImpl {
     /**
      * 上传临时素材
      */
-    private String uploadMediaUrl = "https://api.weixin.qq.com/cgi-bin/media/upload?access_token=ACCESS_TOKEN&type=TYPE";
+    private String uploadTemporaryMediaUrl = "https://api.weixin.qq.com/cgi-bin/media/upload?access_token=ACCESS_TOKEN&type=TYPE";
+
+    /**
+     * 获取临时素材
+     */
+    private String getTemporaryMediaUrl = "https://api.weixin.qq.com/cgi-bin/media/get?access_token=ACCESS_TOKEN&media_id=MEDIA_ID";
 
     /**
      * 上传永久素材
@@ -263,6 +268,7 @@ public class WxServiceImpl {
         try {
             System.out.println("-------------开始请求微信公众号后台-----------------------");
             HttpsURLConnection conn = getHttpsConn(url);
+            System.out.println("-------------请求路径: " + url);
             if (null == conn) {
                 throw new RuntimeException("建立网络连接失败");
             }
@@ -510,6 +516,11 @@ public class WxServiceImpl {
 
     public JSONObject getUserList(String openId) {
         String url = getUserListUrl.replace(ACCESS_TOKEN, token).replace("NEXT_OPENID", openId == null ? "" : openId);
+        return httpsRequest(url, GET, null);
+    }
+
+    public JSONObject getTemporaryMedia(String mediaId) {
+        String url = getTemporaryMediaUrl.replace(ACCESS_TOKEN, token).replace("MEDIA_ID", mediaId);
         return httpsRequest(url, GET, null);
     }
 }
